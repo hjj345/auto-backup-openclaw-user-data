@@ -107,7 +107,8 @@ openclaw skill install https://github.com/hjj345/auto-backup-openclaw-user-data
   },
   "notification": {
     "enabled": true,
-    "channels": ["feishu"]
+    "channels": ["feishu"],
+    "targets": {}
   }
 }
 ```
