@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0.20260326",
+  "version": "1.0.1",
   "createdAt": "",
   "updatedAt": "",
   
@@ -36,6 +36,7 @@
   "notification": {
     "enabled": true,
     "channels": ["feishu"],
+    "targets": {},
     "onSuccess": true,
     "onFailure": true
   },

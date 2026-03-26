@@ -36,6 +36,8 @@
 3. 重启 OpenClaw
    ```bash
    openclaw restart
+   或
+   openclaw gateway restart
    ```
 
 ### Q: 首次使用提示配置文件错误
@@ -192,6 +194,7 @@
 2. 检查 OpenClaw 渠道配置
    ```
    OpenClaw 需要先配置飞书/Telegram 等渠道
+   配置文件：~/.openclaw/openclaw.json
    ```
 
 3. 检查通知配置
@@ -199,10 +202,66 @@
    "notification": {
      "enabled": true,
      "channels": ["feishu"],
+     "targets": {
+       "feishu": [
+         { "type": "group", "id": "oc_xxx", "name": "群名" }
+       ]
+     },
      "onSuccess": true,
      "onFailure": true
    }
    ```
+
+4. 检查是否配置了推送目标
+   - 运行 `/backup_config` 进入交互式配置
+   - 在 Step 5 选择通知渠道后，确保选择了具体的推送目标
+
+### Q: 提示"渠道未配置"或"推送失败"
+
+**原因**：
+- OpenClaw 中未启用对应渠道
+- 推送目标 ID 不正确
+- 渠道配置不完整
+
+**解决方案**：
+
+1. 检查 OpenClaw 配置
+   ```
+   查看 ~/.openclaw/openclaw.json 中的 channels 部分
+   确保对应渠道 enabled: true
+   ```
+
+2. 重新配置推送目标
+   ```
+   /backup_config
+   选择 [1] 交互式配置
+   按步骤选择正确的推送目标
+   ```
+
+3. 手动添加推送目标
+   ```json
+   "notification": {
+     "targets": {
+       "feishu": [
+         { "type": "group", "id": "oc_你的群ID", "name": "群名称" }
+       ]
+     }
+   }
+   ```
+
+### Q: 如何获取群组 ID 或用户 ID？
+
+**飞书群组 ID**：
+1. 在飞书群聊中，点击群设置
+2. 查看群信息，找到群 ID（格式：`oc_xxx`）
+
+**飞书用户 ID**：
+1. 在飞书中查看用户资料
+2. 找到 Open ID（格式：`ou_xxx`）
+
+**Telegram 群组 ID**：
+1. 将 @userinfobot 添加到群组
+2. 它会返回群组 ID（格式：`-100xxx`）
 
 ### Q: 想要关闭通知
 
@@ -218,7 +277,8 @@
 或运行：
 ```
 /backup_config
-关闭通知选项
+选择 [1] 交互式配置
+在通知渠道步骤不选择任何渠道
 ```
 
 ---
@@ -330,5 +390,5 @@ Get-Content "$env:USERPROFILE\.openclaw\workspace\Auto-Backup-Openclaw-User-Data
 
 ---
 
-**文档版本**：v1.0.0  
+**文档版本**：v1.0.1  
 **更新日期**：2026-03-26

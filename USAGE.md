@@ -11,7 +11,8 @@
 3. [使用方法](#使用方法)
 4. [命令说明](#命令说明)
 5. [配置说明](#配置说明)
-6. [常见问题](#常见问题)
+6. [消息通知配置](#消息通知配置)
+7. [常见问题](#常见问题)
 
 ---
 
@@ -133,7 +134,7 @@ openclaw skill install auto-backup-openclaw-user-data
 当前配置
   - 备份模式：全量备份
   - 保留策略：10 份
-  - 通知渠道：feishu
+  - 通知渠道：feishu(2个目标)
 ```
 
 ---
@@ -160,6 +161,104 @@ openclaw skill install auto-backup-openclaw-user-data
 [2] 手动修改配置文件
 [3] 重置为默认配置
 [4] 查看当前配置
+```
+
+#### 交互式配置步骤（6步）
+
+**Step 1/6: 备份范围**
+```
+[1] 全量备份 .openclaw
+[2] 选择性备份
+
+请回复选项编号：
+```
+
+**Step 2/6: 备份时间**
+```
+当前设置: 每天凌晨 3:00
+
+是否修改执行时间？
+  [y] 是，修改时间
+  [n] 否，保持默认
+
+请回复 y 或 n：
+```
+
+如果选择 y，则：
+```
+请输入执行时间（格式：HH:MM，如 03:00）：
+```
+
+**Step 3/6: 存储路径**
+```
+当前设置: ~/.openclaw/workspace/Auto-Backup-Openclaw-User-Data/backups
+
+是否修改存储路径？
+  [y] 是，修改路径
+  [n] 否，保持默认
+
+请回复 y 或 n：
+```
+
+**Step 4/6: 保留策略**
+```
+请选择清理模式：
+
+[1] 按天数保留
+    保留最近 N 天的备份（默认 30 天）
+
+[2] 按份数保留
+    保留最近 N 份备份（默认 10 份）
+
+请回复选项编号：
+```
+
+**Step 5/6: 通知渠道**
+```
+正在检测 OpenClaw 已配置的渠道...
+
+✅ 已检测到可用渠道：
+
+  [1] feishu - 飞书
+  [2] telegram - Telegram
+  [3] discord - Discord
+
+请选择要启用的通知渠道（输入编号，可多选，如：1 2）：
+```
+
+**Step 6/6: 配置推送目标**
+
+对于每个选择的渠道，会显示可用的推送目标：
+
+```
+配置 飞书 推送目标
+----------------------------------------
+
+飞书 推送目标列表：
+
+  [1] 📢 客户部（群组）
+  [2] 📢 通知群（群组）
+  [3] 👤 主人（用户）
+
+请选择推送目标（输入编号，可多选，如：1 2 3）：
+```
+
+**完成配置**：
+```
+✅ 配置完成！
+----------------------------------------
+
+备份范围: 全量备份
+执行时间: 每天 03:00
+保留策略: 10 份
+通知渠道: 飞书
+
+📁 配置文件: ~/.openclaw/workspace/Auto-Backup-Openclaw-User-Data/config.json
+
+💡 可用命令:
+  /backup_now     - 立即执行备份
+  /backup_status  - 查看备份状态
+  /backup_list    - 列出备份文件
 ```
 
 **快捷配置**：
@@ -243,6 +342,7 @@ openclaw skill install auto-backup-openclaw-user-data
 | `schedule.cron` | 定时执行时间（cron表达式） | `0 3 * * *` |
 | `retention.count` | 保留备份数量 | `10` |
 | `notification.channels` | 通知渠道 | `["feishu"]` |
+| `notification.targets` | 推送目标配置 | `{}` |
 
 ### Cron 表达式示例
 
@@ -252,6 +352,90 @@ openclaw skill install auto-backup-openclaw-user-data
 | `0 4 * * *` | 每天凌晨 4:00 |
 | `0 3 * * 0` | 每周日凌晨 3:00 |
 | `0 3 1 * *` | 每月1日凌晨 3:00 |
+
+---
+
+## 消息通知配置
+
+### 配置结构
+
+消息通知配置包含以下字段：
+
+```json
+{
+  "notification": {
+    "enabled": true,
+    "channels": ["feishu", "telegram"],
+    "targets": {
+      "feishu": [
+        { "type": "group", "id": "oc_xxx", "name": "技术开发中心" },
+        { "type": "user", "id": "ou_xxx", "name": "黄总" }
+      ],
+      "telegram": [
+        { "type": "group", "id": "-100xxx", "name": "通知群" }
+      ]
+    },
+    "onSuccess": true,
+    "onFailure": true
+  }
+}
+```
+
+### 字段说明
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `enabled` | boolean | 是否启用通知 |
+| `channels` | array | 通知渠道列表（feishu/telegram/discord/slack） |
+| `targets` | object | 每个渠道的具体推送目标 |
+| `onSuccess` | boolean | 备份成功时是否发送通知 |
+| `onFailure` | boolean | 备份失败时是否发送通知 |
+
+### 推送目标字段
+
+每个推送目标包含：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `type` | string | `group`（群组）或 `user`（用户） |
+| `id` | string | 目标 ID |
+| `name` | string | 目标名称（用于显示，可选） |
+
+### 如何获取推送目标 ID
+
+#### 飞书
+
+**群组 ID**：
+1. 在飞书群聊中，点击群设置
+2. 查看群信息，找到群 ID（格式：`oc_xxx`）
+
+**用户 ID**：
+1. 在飞书中查看用户资料
+2. 找到 Open ID（格式：`ou_xxx`）
+
+#### Telegram
+
+**群组 ID**：
+1. 将 @userinfobot 添加到群组
+2. 它会返回群组 ID（格式：`-100xxx`）
+
+### 推送目标来源
+
+交互式配置中的推送目标来自 OpenClaw 配置文件：
+
+```
+~/.openclaw/openclaw.json
+```
+
+系统会自动读取 `bindings` 配置中的群组和用户信息。
+
+### 通知行为说明
+
+| 场景 | 行为 |
+|------|------|
+| 已配置 `targets` | 向指定的用户/群组发送通知 |
+| 未配置 `targets` | 尝试通过当前对话发送通知 |
+| 推送失败 | 通过当前对话提醒用户 |
 
 ---
 
@@ -287,6 +471,12 @@ openclaw skill install auto-backup-openclaw-user-data
 2. 检查 HEARTBEAT 配置是否正确
 3. 查看日志了解详情
 
+### Q: 没有收到通知？
+
+1. 检查通知是否启用：`/backup_status`
+2. 检查 OpenClaw 是否配置了对应渠道
+3. 运行 `/backup_config` 重新配置推送目标
+
 ### Q: 如何关闭通知？
 
 修改配置文件：
@@ -295,6 +485,8 @@ openclaw skill install auto-backup-openclaw-user-data
   "enabled": false
 }
 ```
+
+或运行 `/backup_config`，在通知渠道步骤不选择任何渠道。
 
 ---
 
@@ -313,9 +505,9 @@ openclaw skill install auto-backup-openclaw-user-data
 
 - **作者**：Jack·Huang
 - **邮箱**：jack698698@gmail.com
-- **版本**：1.0.0.20260326
+- **版本**：1.0.1.20260326
 
 ---
 
-**文档版本**：v1.0.0.20260326  
+**文档版本**：v1.0.1.20260326  
 **更新日期**：2026-03-26

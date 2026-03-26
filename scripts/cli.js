@@ -1,6 +1,7 @@
 /**
  * CLI 模块
  * 命令行接口入口
+ * v1.0.1 - 增加推送目标配置
  */
 
 const fs = require('fs-extra');
@@ -15,6 +16,8 @@ const {
   configExists,
   ensureConfigDir,
   updateConfig,
+  loadOpenClawConfig,
+  getChannelTargets,
   BACKUPS_DIR 
 } = require('./config');
 const { info, warn, error, readLogs } = require('./logger');
@@ -122,6 +125,7 @@ class CLI {
     
     try {
       const status = await this.backupManager.getStatus();
+      const config = await loadConfig();
       
       output.push('📊 备份状态');
       output.push('━'.repeat(40));
@@ -162,7 +166,21 @@ class CLI {
       output.push('⚙️ 当前配置');
       output.push(`  - 备份模式：${status.config.mode === 'full' ? '全量备份' : '选择性备份'}`);
       output.push(`  - 保留策略：${status.config.retention.mode === 'days' ? `${status.config.retention.days} 天` : `${status.config.retention.count} 份`}`);
-      output.push(`  - 通知渠道：${status.config.notification.join(', ')}`);
+      
+      // 通知配置
+      const notification = config.notification;
+      const channels = notification.channels || [];
+      const targets = notification.targets || {};
+      
+      let notificationInfo = channels.map(ch => {
+        const t = targets[ch] || [];
+        if (t.length > 0) {
+          return `${ch}(${t.length}个目标)`;
+        }
+        return ch;
+      }).join(', ') || '未配置';
+      
+      output.push(`  - 通知渠道：${notificationInfo}`);
       
       return this.outputSuccess(output.join('\n'), status);
     } catch (err) {
@@ -310,7 +328,7 @@ class CLI {
     output.push('📋 交互式配置向导');
     output.push('━'.repeat(40));
     output.push('');
-    output.push('Step 1/5: 备份范围');
+    output.push('Step 1/6: 备份范围');
     output.push('  [1] 全量备份 .openclaw');
     output.push('  [2] 选择性备份');
     output.push('');
@@ -321,9 +339,402 @@ class CLI {
     
     return this.outputSuccess(output.join('\n'), { 
       step: 1, 
-      total: 5,
+      total: 6,
       type: 'interactive' 
     });
+  }
+
+  /**
+   * 处理交互式配置步骤
+   * @param {number} step 当前步骤
+   * @param {string} input 用户输入
+   * @param {object} state 配置状态
+   */
+  async handleInteractiveStep(step, input, state = {}) {
+    const output = [];
+    
+    switch (step) {
+      case 1: // 备份范围
+        if (input === '1') {
+          state.mode = 'full';
+        } else if (input === '2') {
+          state.mode = 'partial';
+        } else {
+          return this.outputError('请输入 1 或 2');
+        }
+        
+        output.push('Step 2/6: 备份时间');
+        output.push('━'.repeat(40));
+        output.push('');
+        output.push('当前设置: 每天凌晨 3:00');
+        output.push('');
+        output.push('是否修改执行时间？');
+        output.push('  [y] 是，修改时间');
+        output.push('  [n] 否，保持默认');
+        output.push('');
+        output.push('请回复 y 或 n：');
+        
+        return this.outputSuccess(output.join('\n'), { step: 2, total: 6, state, type: 'interactive' });
+        
+      case 2: // 备份时间
+        if (input.toLowerCase() === 'y') {
+          output.push('Step 2/6: 备份时间');
+          output.push('━'.repeat(40));
+          output.push('');
+          output.push('请输入执行时间（格式：HH:MM，如 03:00）：');
+          output.push('');
+          output.push('请直接回复时间：');
+          
+          return this.outputSuccess(output.join('\n'), { step: 2.1, total: 6, state, type: 'interactive' });
+        }
+        
+        // 继续下一步
+        state.time = '03:00';
+        return this.askStoragePath(state);
+        
+      case 2.1: // 输入具体时间
+        const timeMatch = input.match(/^(\d{1,2}):(\d{2})$/);
+        if (!timeMatch) {
+          return this.outputError('时间格式无效，请使用 HH:MM 格式（如 03:00）');
+        }
+        state.time = input;
+        return this.askStoragePath(state);
+        
+      case 3: // 存储路径选择
+        if (input.toLowerCase() === 'y') {
+          output.push('Step 3/6: 存储路径');
+          output.push('━'.repeat(40));
+          output.push('');
+          output.push('请输入新的备份存储路径：');
+          output.push('');
+          output.push('示例格式：');
+          output.push('  D:\\Backups\\openclaw');
+          output.push('  /home/user/backups');
+          output.push('');
+          output.push('请直接回复路径，或回复 c 取消：');
+          
+          return this.outputSuccess(output.join('\n'), { step: 3.1, total: 6, state, type: 'interactive' });
+        }
+        
+        // 使用默认路径
+        state.outputPath = null;
+        return this.askRetention(state);
+        
+      case 3.1: // 输入具体路径
+        if (input.toLowerCase() === 'c') {
+          return this.askStoragePath(state);
+        }
+        state.outputPath = input;
+        return this.askRetention(state);
+        
+      case 4: // 保留策略选择
+        if (input === '1') {
+          state.retentionMode = 'days';
+          output.push('Step 4/6: 保留策略');
+          output.push('━'.repeat(40));
+          output.push('');
+          output.push('请输入保留天数（默认 30 天）：');
+          output.push('');
+          output.push('请直接回复数字，或回复 d 使用默认值：');
+          
+          return this.outputSuccess(output.join('\n'), { step: 4.1, total: 6, state, type: 'interactive' });
+        } else if (input === '2') {
+          state.retentionMode = 'count';
+          output.push('Step 4/6: 保留策略');
+          output.push('━'.repeat(40));
+          output.push('');
+          output.push('请输入保留份数（默认 10 份）：');
+          output.push('');
+          output.push('建议范围: 5 - 30 份');
+          output.push('');
+          output.push('请直接回复数字，或回复 d 使用默认值：');
+          
+          return this.outputSuccess(output.join('\n'), { step: 4.2, total: 6, state, type: 'interactive' });
+        }
+        return this.outputError('请输入 1 或 2');
+        
+      case 4.1: // 按天数
+        if (input.toLowerCase() === 'd') {
+          state.retentionValue = 30;
+        } else {
+          const days = parseInt(input);
+          if (isNaN(days) || days < 1) {
+            return this.outputError('请输入有效的天数（大于 0 的数字）');
+          }
+          state.retentionValue = days;
+        }
+        return this.askNotificationChannel(state);
+        
+      case 4.2: // 按份数
+        if (input.toLowerCase() === 'd') {
+          state.retentionValue = 10;
+        } else {
+          const count = parseInt(input);
+          if (isNaN(count) || count < 1) {
+            return this.outputError('请输入有效的份数（大于 0 的数字）');
+          }
+          state.retentionValue = count;
+        }
+        return this.askNotificationChannel(state);
+        
+      case 5: // 选择通知渠道
+        const selectedChannels = input.split(/\s+/).filter(s => s);
+        const channelMap = { '1': 'feishu', '2': 'telegram', '3': 'discord', '4': 'slack' };
+        
+        state.selectedChannels = selectedChannels.map(c => channelMap[c]).filter(c => c);
+        
+        if (state.selectedChannels.length === 0) {
+          return this.outputError('请至少选择一个渠道');
+        }
+        
+        // 开始配置每个渠道的推送目标
+        state.channelIndex = 0;
+        return this.askChannelTargets(state);
+        
+      case 6: // 选择推送目标
+        const selectedTargets = input.split(/\s+/).filter(s => s);
+        const currentChannel = state.selectedChannels[state.channelIndex];
+        
+        if (selectedTargets.length > 0 && state.availableTargets) {
+          state.targets = state.targets || {};
+          state.targets[currentChannel] = selectedTargets.map(idx => 
+            state.availableTargets[parseInt(idx) - 1]
+          ).filter(t => t);
+        }
+        
+        state.channelIndex++;
+        
+        if (state.channelIndex < state.selectedChannels.length) {
+          return this.askChannelTargets(state);
+        }
+        
+        // 所有渠道配置完成，保存配置
+        return this.saveInteractiveConfig(state);
+        
+      default:
+        return this.outputError('未知步骤');
+    }
+  }
+
+  /**
+   * 询问存储路径
+   */
+  async askStoragePath(state) {
+    const output = [];
+    
+    output.push('Step 3/6: 存储路径');
+    output.push('━'.repeat(40));
+    output.push('');
+    output.push('当前设置: ');
+    output.push('  ~/.openclaw/workspace/Auto-Backup-Openclaw-User-Data/backups');
+    output.push('');
+    output.push('是否修改存储路径？');
+    output.push('  [y] 是，修改路径');
+    output.push('  [n] 否，保持默认');
+    output.push('');
+    output.push('请回复 y 或 n：');
+    
+    return this.outputSuccess(output.join('\n'), { step: 3, total: 6, state, type: 'interactive' });
+  }
+
+  /**
+   * 询问保留策略
+   */
+  async askRetention(state) {
+    const output = [];
+    
+    output.push('Step 4/6: 保留策略');
+    output.push('━'.repeat(40));
+    output.push('');
+    output.push('请选择清理模式：');
+    output.push('');
+    output.push('[1] 按天数保留');
+    output.push('    保留最近 N 天的备份（默认 30 天）');
+    output.push('');
+    output.push('[2] 按份数保留');
+    output.push('    保留最近 N 份备份（默认 10 份）');
+    output.push('');
+    output.push('请回复选项编号：');
+    
+    return this.outputSuccess(output.join('\n'), { step: 4, total: 6, state, type: 'interactive' });
+  }
+
+  /**
+   * 询问通知渠道
+   */
+  async askNotificationChannel(state) {
+    const output = [];
+    
+    // 加载 OpenClaw 配置
+    const openclawConfig = await loadOpenClawConfig();
+    
+    output.push('Step 5/6: 通知渠道');
+    output.push('━'.repeat(40));
+    output.push('');
+    output.push('正在检测 OpenClaw 已配置的渠道...');
+    output.push('');
+    
+    // 显示可用渠道
+    const channels = [];
+    if (openclawConfig.channels.feishu?.enabled) {
+      channels.push({ key: '1', name: 'feishu', label: '飞书' });
+    }
+    if (openclawConfig.channels.telegram?.enabled) {
+      channels.push({ key: '2', name: 'telegram', label: 'Telegram' });
+    }
+    if (openclawConfig.channels.discord?.enabled) {
+      channels.push({ key: '3', name: 'discord', label: 'Discord' });
+    }
+    if (openclawConfig.channels.slack?.enabled) {
+      channels.push({ key: '4', name: 'slack', label: 'Slack' });
+    }
+    
+    if (channels.length === 0) {
+      output.push('⚠️ 未检测到已配置的渠道');
+      output.push('');
+      output.push('请先在 OpenClaw 中配置至少一个通信渠道。');
+      output.push('配置文件位置：~/.openclaw/openclaw.json');
+      output.push('');
+      output.push('配置完成后，运行 /backup_config 重新配置通知。');
+      
+      // 跳过通知配置，直接保存
+      state.selectedChannels = [];
+      return this.saveInteractiveConfig(state);
+    }
+    
+    output.push('✅ 已检测到可用渠道：');
+    output.push('');
+    channels.forEach(ch => {
+      output.push(`  [${ch.key}] ${ch.name} - ${ch.label}`);
+    });
+    output.push('');
+    output.push('请选择要启用的通知渠道（输入编号，可多选，如：1 2）：');
+    
+    return this.outputSuccess(output.join('\n'), { step: 5, total: 6, state, type: 'interactive' });
+  }
+
+  /**
+   * 询问渠道推送目标
+   */
+  async askChannelTargets(state) {
+    const output = [];
+    const channel = state.selectedChannels[state.channelIndex];
+    const channelNames = { feishu: '飞书', telegram: 'Telegram', discord: 'Discord', slack: 'Slack' };
+    
+    output.push(`Step 6/6: 配置 ${channelNames[channel]} 推送目标`);
+    output.push('━'.repeat(40));
+    output.push('');
+    
+    // 加载可用目标
+    const openclawConfig = await loadOpenClawConfig();
+    const targets = getChannelTargets(channel, openclawConfig);
+    
+    if (targets.length === 0) {
+      output.push(`⚠️ 未检测到 ${channelNames[channel]} 的可用推送目标`);
+      output.push('');
+      output.push('可能原因：');
+      output.push('  - OpenClaw 未绑定任何群组或用户');
+      output.push('  - 渠道配置不完整');
+      output.push('');
+      output.push('将跳过此渠道的推送目标配置。');
+      output.push('');
+      output.push('请回复任意键继续：');
+      
+      state.availableTargets = [];
+    } else {
+      output.push(`${channelNames[channel]} 推送目标列表：`);
+      output.push('');
+      
+      targets.forEach((t, idx) => {
+        const icon = t.type === 'group' ? '📢' : '👤';
+        output.push(`  [${idx + 1}] ${icon} ${t.name || t.id}（${t.type === 'group' ? '群组' : '用户'}）`);
+      });
+      
+      output.push('');
+      output.push('请选择推送目标（输入编号，可多选，如：1 2 3）：');
+      
+      state.availableTargets = targets;
+    }
+    
+    return this.outputSuccess(output.join('\n'), { step: 6, total: 6, state, type: 'interactive' });
+  }
+
+  /**
+   * 保存交互式配置
+   */
+  async saveInteractiveConfig(state) {
+    const output = [];
+    
+    try {
+      const config = await loadConfig();
+      
+      // 更新配置
+      if (state.mode) {
+        config.backup.mode = state.mode;
+      }
+      
+      if (state.time) {
+        const [hour, minute] = state.time.split(':').map(Number);
+        config.schedule.cron = `${minute || 0} ${hour || 3} * * *`;
+      }
+      
+      if (state.outputPath) {
+        config.output.path = state.outputPath;
+      }
+      
+      if (state.retentionMode && state.retentionValue) {
+        config.retention.mode = state.retentionMode;
+        if (state.retentionMode === 'days') {
+          config.retention.days = state.retentionValue;
+        } else {
+          config.retention.count = state.retentionValue;
+        }
+      }
+      
+      if (state.selectedChannels) {
+        config.notification.channels = state.selectedChannels;
+      }
+      
+      if (state.targets) {
+        config.notification.targets = state.targets;
+      }
+      
+      await saveConfig(config);
+      
+      output.push('✅ 配置完成！');
+      output.push('━'.repeat(40));
+      output.push('');
+      
+      if (state.mode) {
+        output.push(`备份范围: ${state.mode === 'full' ? '全量备份' : '选择性备份'}`);
+      }
+      if (state.time) {
+        output.push(`执行时间: 每天 ${state.time}`);
+      }
+      if (state.outputPath) {
+        output.push(`存储路径: ${state.outputPath}`);
+      }
+      if (state.retentionMode && state.retentionValue) {
+        output.push(`保留策略: ${state.retentionMode === 'days' ? `${state.retentionValue} 天` : `${state.retentionValue} 份`}`);
+      }
+      if (state.selectedChannels && state.selectedChannels.length > 0) {
+        const channelNames = { feishu: '飞书', telegram: 'Telegram', discord: 'Discord', slack: 'Slack' };
+        const channelInfo = state.selectedChannels.map(c => channelNames[c]).join('、');
+        output.push(`通知渠道: ${channelInfo}`);
+      }
+      
+      output.push('');
+      output.push(`📁 配置文件: ${getConfigPaths().configFile}`);
+      output.push('');
+      output.push('💡 可用命令:');
+      output.push('  /backup_now     - 立即执行备份');
+      output.push('  /backup_status  - 查看备份状态');
+      output.push('  /backup_list    - 列出备份文件');
+      
+      return this.outputSuccess(output.join('\n'), { config });
+    } catch (err) {
+      return this.outputError(`保存配置失败: ${err.message}`);
+    }
   }
 
   /**

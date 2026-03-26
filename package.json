@@ -1,6 +1,6 @@
 {
   "name": "auto-backup-openclaw-user-data",
-  "version": "1.0.0.20260326",
+  "version": "1.0.1",
   "description": "OpenClaw 用户数据自动备份技能",
   "main": "scripts/backup.js",
   "author": "Jack·Huang <jack698698@gmail.com>",

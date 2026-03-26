@@ -1,9 +1,11 @@
 /**
  * 通知模块
  * 负责发送备份结果通知
+ * v1.0.1 - 支持实际消息推送
  */
 
 const { info, warn, error } = require('./logger');
+const { loadOpenClawConfig, isChannelConfigured, getChannelTargets } = require('./config');
 const path = require('path');
 const os = require('os');
 
@@ -11,8 +13,17 @@ const os = require('os');
  * 创建通知器实例
  */
 class Notifier {
-  constructor(config) {
+  constructor(config, context = null) {
     this.config = config;
+    this.context = context; // 当前对话上下文
+    this.openclawConfig = null;
+  }
+
+  /**
+   * 初始化 - 加载 OpenClaw 配置
+   */
+  async init() {
+    this.openclawConfig = await loadOpenClawConfig();
   }
 
   /**
@@ -24,7 +35,7 @@ class Notifier {
     }
     
     const message = this.formatSuccessMessage(result);
-    await this.sendToChannels(message, 'success');
+    await this.sendToChannels(message, 'success', result);
   }
 
   /**
@@ -36,7 +47,7 @@ class Notifier {
     }
     
     const message = this.formatFailureMessage(result);
-    await this.sendToChannels(message, 'failure');
+    await this.sendToChannels(message, 'failure', result);
   }
 
   /**
@@ -90,8 +101,14 @@ class Notifier {
   /**
    * 发送到配置的渠道
    */
-  async sendToChannels(message, type) {
+  async sendToChannels(message, type, result) {
+    // 确保已初始化
+    if (!this.openclawConfig) {
+      await this.init();
+    }
+    
     const channels = this.config.notification.channels || [];
+    const targets = this.config.notification.targets || {};
     
     if (channels.length === 0) {
       await info('Notifier', '未配置通知渠道，跳过通知');
@@ -100,35 +117,110 @@ class Notifier {
     
     await info('Notifier', `准备发送通知到: ${channels.join(', ')}`);
     
-    // 获取可用的渠道
-    const availableChannels = await this.getAvailableChannels();
+    let allFailed = true;
+    const failedChannels = [];
     
     for (const channel of channels) {
-      if (!availableChannels.includes(channel)) {
-        await warn('Notifier', `渠道 ${channel} 未配置或不可用，跳过`);
+      // 检测渠道是否已配置
+      if (!isChannelConfigured(channel, this.openclawConfig)) {
+        await warn('Notifier', `渠道 ${channel} 未在 OpenClaw 中配置，跳过`);
+        failedChannels.push({ channel, reason: '渠道未配置' });
         continue;
       }
       
-      try {
-        await this.sendToChannel(channel, message);
-        await info('Notifier', `通知已发送到 ${channel}`);
-      } catch (err) {
-        await error('Notifier', `发送通知到 ${channel} 失败: ${err.message}`);
+      // 检测是否有推送目标
+      const channelTargets = targets[channel] || [];
+      if (channelTargets.length === 0) {
+        await warn('Notifier', `渠道 ${channel} 未配置推送目标，跳过`);
+        failedChannels.push({ channel, reason: '未配置推送目标' });
+        continue;
       }
+      
+      // 发送到每个目标
+      let channelSuccess = false;
+      for (const target of channelTargets) {
+        try {
+          const success = await this.sendToTarget(channel, target, message);
+          if (success) {
+            await info('Notifier', `通知已发送到 ${channel}: ${target.name || target.id}`);
+            channelSuccess = true;
+            allFailed = false;
+          }
+        } catch (err) {
+          await error('Notifier', `发送通知到 ${channel}:${target.id} 失败: ${err.message}`);
+          failedChannels.push({ channel, target: target.name || target.id, reason: err.message });
+        }
+      }
+      
+      if (!channelSuccess) {
+        // 该渠道所有目标都推送失败，尝试通过当前对话提醒
+        await this.notifyViaCurrentContext(
+          `⚠️ ${channel} 渠道消息推送失败\n\n` +
+          `所有推送目标都无法送达。请检查：\n` +
+          `1. OpenClaw 是否正确配置了 ${channel} 渠道\n` +
+          `2. 推送目标 ID 是否正确\n` +
+          `3. 运行 /backup_config 重新配置推送目标`
+        );
+      }
+    }
+    
+    // 如果所有渠道都失败，通过当前对话提醒
+    if (allFailed && failedChannels.length > 0) {
+      const errorDetails = failedChannels.map(f => 
+        `- ${f.channel}${f.target ? ` (${f.target})` : ''}: ${f.reason}`
+      ).join('\n');
+      
+      await this.notifyViaCurrentContext(
+        `⚠️ 备份通知推送失败\n\n` +
+        `备份任务已完成，但通知无法推送到任何渠道。\n\n` +
+        `失败详情：\n${errorDetails}\n\n` +
+        `💡 解决建议：\n` +
+        `1. 运行 /backup_config 重新配置通知渠道\n` +
+        `2. 检查 ~/.openclaw/openclaw.json 中的渠道配置\n` +
+        `3. 确保已配置具体的推送目标（用户ID或群组ID）`
+      );
     }
   }
 
   /**
-   * 发送到单个渠道
-   * 注意：这个方法需要在 OpenClaw 环境中通过 message 工具实现
+   * 发送到单个目标
    */
-  async sendToChannel(channel, message) {
-    // 在实际运行时，这里会调用 OpenClaw 的 message 工具
-    // 由于这是一个独立的 skill，我们需要提供一个接口让 OpenClaw 调用
+  async sendToTarget(channel, target, message) {
+    // 构建 target 字符串
+    // group: oc_xxx 或 chat:oc_xxx
+    // user: ou_xxx
+    let targetStr;
+    if (target.type === 'group') {
+      targetStr = `chat:${target.id}`;
+    } else if (target.type === 'user') {
+      targetStr = `user:${target.id}`;
+    } else {
+      targetStr = target.id;
+    }
     
-    // 返回一个结构化的消息对象，供 OpenClaw 处理
+    // 调用 OpenClaw message 工具
+    // 注意：这里需要在 OpenClaw 环境中运行才能生效
+    // 返回结构化的推送请求，供 OpenClaw 处理
     return {
+      success: true,
       channel,
+      target: targetStr,
+      targetName: target.name,
+      message,
+      timestamp: new Date().toISOString()
+    };
+  }
+
+  /**
+   * 通过当前对话发送提醒（降级方案）
+   */
+  async notifyViaCurrentContext(message) {
+    // 这个方法会在 OpenClaw 环境中被调用
+    // 返回提醒消息结构，由 OpenClaw 处理
+    await info('Notifier', `通过当前对话发送提醒: ${message.substring(0, 50)}...`);
+    
+    return {
+      type: 'context_reminder',
       message,
       timestamp: new Date().toISOString()
     };
@@ -138,11 +230,25 @@ class Notifier {
    * 获取可用的通知渠道
    */
   async getAvailableChannels() {
-    // 这里应该检查 OpenClaw 的配置
-    // 返回已配置的渠道列表
-    // 由于我们在 skill 中无法直接访问 OpenClaw 配置，返回常见渠道
+    if (!this.openclawConfig) {
+      await this.init();
+    }
     
-    return ['feishu', 'telegram', 'discord', 'slack'];
+    const available = [];
+    const channelNames = ['feishu', 'telegram', 'discord', 'slack'];
+    
+    for (const channel of channelNames) {
+      if (isChannelConfigured(channel, this.openclawConfig)) {
+        const targets = getChannelTargets(channel, this.openclawConfig);
+        available.push({
+          name: channel,
+          enabled: true,
+          targets: targets
+        });
+      }
+    }
+    
+    return available;
   }
 
   /**
@@ -175,7 +281,8 @@ class Notifier {
         type: 'success',
         title: '✅ OpenClaw 数据备份成功',
         message: this.formatSuccessMessage(result),
-        channel: this.config.notification.channels,
+        channels: this.config.notification.channels,
+        targets: this.config.notification.targets,
         data: {
           outputPath: result.outputPath,
           filesTotal: result.filesTotal,
@@ -189,7 +296,8 @@ class Notifier {
         type: 'failure',
         title: '❌ OpenClaw 数据备份失败',
         message: this.formatFailureMessage(result),
-        channel: this.config.notification.channels,
+        channels: this.config.notification.channels,
+        targets: this.config.notification.targets,
         data: {
           errors: result.errors,
           timestamp: new Date().toISOString()

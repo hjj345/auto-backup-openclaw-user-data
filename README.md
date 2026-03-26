@@ -2,7 +2,7 @@
 
 > OpenClaw 用户数据自动备份技能
 
-[![Version](https://img.shields.io/badge/version-1.0.0.20260326-blue.svg)](https://github.com/yourusername/auto-backup-openclaw-user-data)
+[![Version](https://img.shields.io/badge/version-1.0.1.20260326-blue.svg)](https://github.com/yourusername/auto-backup-openclaw-user-data)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![OpenClaw](https://img.shields.io/badge/OpenClaw-v2026.3.1+-purple.svg)](https://openclaw.ai)
 
@@ -10,7 +10,7 @@
 
 ## 简介
 
-`Auto-Backup-Openclaw-User-Data` 是一个专为 OpenClaw 设计的自动备份技能，能够自动备份用户数据目录，支持全量/选择性备份、定时执行、ZIP 压缩、日志记录、消息通知和保留策略管理。
+`Auto-Backup-Openclaw-User-Data` 是一个专为 OpenClaw 设计的自动备份skill技能，使用本skill能够更好完成自动备份用户数据目录，支持全量/选择性备份、定时执行、ZIP 压缩、日志记录、消息通知和保留策略管理。
 
 ## 功能特性
 
@@ -39,7 +39,7 @@ openclaw skill install /path/to/auto-backup-openclaw-user-data.skill
 ### 方式三：GitHub 安装
 
 ```bash
-openclaw skill install https://github.com/yourusername/auto-backup-openclaw-user-data
+openclaw skill install https://github.com/hjj345/auto-backup-openclaw-user-data
 ```
 
 ## 快速开始
@@ -194,15 +194,17 @@ npm test
 
 ## 更新日志
 
+### v1.0.1.20260326 (2026-03-26)
+
+- 新增：消息推送目标配置功能
+- 新增：读取 OpenClaw 配置自动获取可用推送目标
+- 新增：推送失败时通过当前对话提醒用户
+- 优化：`/backup_list` 只显示本 skill 产生的备份文件
+- 优化：交互式配置增加推送目标选择步骤
+
 ### v1.0.0.20260326 (2026-03-26)
 
 - 初始版本发布
-- 支持全量/选择性备份
-- 支持定时执行
-- 支持 ZIP 压缩和自动命名
-- 支持日志记录
-- 支持消息通知
-- 支持保留策略管理
 
 ---
 

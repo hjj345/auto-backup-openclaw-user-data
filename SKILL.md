@@ -15,13 +15,19 @@ description: |
 
 OpenClaw 用户数据自动备份技能。
 
+## 版本
+
+- **当前版本**：v1.0.1.20260326
+- **更新日期**：2026-03-26
+
 ## 功能
 
 - **自动备份**：定时备份 `.openclaw` 目录
 - **选择性备份**：支持全量或部分备份
 - **ZIP 压缩**：自动压缩并按规则命名
+- **定时调度**：支持自定义执行时间
 - **日志记录**：完整记录执行过程
-- **消息通知**：支持多渠道推送结果
+- **消息通知**：支持多渠道推送结果（需配置推送目标）
 - **保留策略**：自动清理旧备份
 
 ## 命令
@@ -38,64 +44,46 @@ OpenClaw 用户数据自动备份技能。
 
 配置文件位置：`~/.openclaw/workspace/Auto-Backup-Openclaw-User-Data/config.json`
 
+### 消息通知配置
+
+```json
+{
+  "notification": {
+    "enabled": true,
+    "channels": ["feishu", "telegram"],
+    "targets": {
+      "feishu": [
+        { "type": "group", "id": "oc_xxx", "name": "技术开发中心" },
+        { "type": "user", "id": "ou_xxx", "name": "用户名" }
+      ],
+      "telegram": [
+        { "type": "group", "id": "-100xxx", "name": "通知群" }
+      ]
+    },
+    "onSuccess": true,
+    "onFailure": true
+  }
+}
+```
+
+**注意**：消息通知需要在 OpenClaw 中先配置对应的通信渠道，详见 `references/config-schema.md`。
+
 详细配置说明：见 [references/config-schema.md](references/config-schema.md)
 
 ## 故障排查
 
 常见问题：见 [references/troubleshooting.md](references/troubleshooting.md)
 
-## 使用示例
+## 更新日志
 
-```
-用户：帮我备份一下 OpenClaw 数据
-助手：好的，立即执行备份... [执行 /backup_now]
+### v1.0.1.20260326 (2026-03-26)
 
-用户：设置每天凌晨3点自动备份
-助手：好的，正在配置定时备份... [执行 /backup_config]
+- 新增：消息推送目标配置功能
+- 新增：读取 OpenClaw 配置自动获取可用推送目标
+- 新增：推送失败时通过当前对话提醒用户
+- 优化：`/backup_list` 只显示本 skill 产生的备份文件
+- 优化：交互式配置增加推送目标选择步骤
 
-用户：查看备份状态
-助手：[执行 /backup_status]
+### v1.0.0.20260326 (2026-03-26)
 
-用户：列出所有备份文件
-助手：[执行 /backup_list]
-
-用户：清理旧备份
-助手：[执行 /backup_clean]
-```
-
-## 执行流程
-
-### /backup_now
-
-1. 检查是否有正在进行的备份
-2. 读取配置
-3. 收集待备份文件
-4. 执行 ZIP 压缩
-5. 生成符合命名规则的文件名
-6. 移动到指定存储目录
-7. 执行保留策略清理
-8. 记录日志
-9. 发送通知
-
-### /backup_config
-
-1. 检查配置文件是否存在，不存在则创建默认配置
-2. 显示配置菜单：
-   - [1] 交互式配置
-   - [2] 手动修改配置文件
-   - [3] 重置为默认配置
-3. 根据用户选择执行相应操作
-
-### HEARTBEAT 定时检查
-
-当 HEARTBEAT 触发时，检查是否到达备份时间，如到达则自动执行备份。
-
-## 文件结构
-
-```
-~/.openclaw/workspace/Auto-Backup-Openclaw-User-Data/
-├── config.json       # 用户配置
-├── backup.log        # 备份日志
-└── backups/          # 备份文件存储
-    └── auto-backup-openclaw-user-data_YYYYMMDD_HHMM_vX.X.X_XX.zip
-```
+- 初始版本发布

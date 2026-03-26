@@ -16,7 +16,7 @@
 
 ```json
 {
-  "version": "1.0.0",
+  "version": "1.0.1",
   "createdAt": "2026-03-26T15:00:00+08:00",
   "updatedAt": "2026-03-26T15:00:00+08:00",
   
@@ -62,11 +62,11 @@
 仅在 `mode: "partial"` 时生效，可用的目标目录：
 
 ```
-workspace          # 主工作空间
-workspace-news     # 新闻工作空间
-workspace-hr       # 人事工作空间
-workspace-tech     # 技术工作空间
-memory             # 记忆文件
+workspace       # 主工作空间
+workspace-1     # 1工作空间
+workspace-2     # 2工作空间
+workspace-3     # 3工作空间
+memory          # 记忆文件
 ```
 
 #### exclude 排除目录
@@ -166,6 +166,7 @@ auto-backup-openclaw-user-data_20260326_0300_v2026.3.23-2_01.zip
 |------|------|------|--------|------|
 | `enabled` | boolean | 是 | true | 是否启用通知 |
 | `channels` | array | 是 | ["feishu"] | 通知渠道列表 |
+| `targets` | object | 否 | {} | 推送目标配置 |
 | `onSuccess` | boolean | 否 | true | 备份成功时发送通知 |
 | `onFailure` | boolean | 否 | true | 备份失败时发送通知 |
 
@@ -179,6 +180,44 @@ slack        # Slack
 ```
 
 **注意**：需要先在 OpenClaw 中配置相应的渠道。
+
+#### targets 推送目标配置
+
+`targets` 字段用于指定每个渠道的具体推送目标（用户或群组）：
+
+```json
+{
+  "targets": {
+    "feishu": [
+      { "type": "group", "id": "oc_xxx", "name": "技术开发中心" },
+      { "type": "user", "id": "ou_xxx", "name": "黄总" }
+    ],
+    "telegram": [
+      { "type": "group", "id": "-100xxx", "name": "通知群" },
+      { "type": "user", "id": "123456789", "name": "用户名" }
+    ]
+  }
+}
+```
+
+**字段说明**：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `type` | string | 目标类型：`group`（群组）或 `user`（用户） |
+| `id` | string | 目标 ID（飞书群组为 `oc_xxx`，用户为 `ou_xxx`） |
+| `name` | string | 目标名称（用于显示，可选） |
+
+**如何获取推送目标**：
+
+1. 运行 `/backup_config` 进入交互式配置
+2. 选择通知渠道后，系统会自动列出可用的推送目标
+3. 从列表中选择需要的目标
+
+**注意事项**：
+- 如果未配置 `targets`，系统会尝试通过当前对话发送通知
+- 推送目标来自 `~/.openclaw/openclaw.json` 中的 `bindings` 配置
+- 群组 ID 需要是完整的 ID（如 `oc_xxx`），不能是群名称
 
 ---
 
@@ -238,7 +277,7 @@ ERROR    # 错误信息
 
 ```json
 {
-  "version": "1.0.0",
+  "version": "1.0.1",
   "createdAt": "2026-03-26T15:00:00+08:00",
   "updatedAt": "2026-03-26T15:00:00+08:00",
   
@@ -275,6 +314,14 @@ ERROR    # 错误信息
   "notification": {
     "enabled": true,
     "channels": ["feishu", "telegram"],
+    "targets": {
+      "feishu": [
+        { "type": "group", "id": "oc_xxx", "name": "技术开发中心" }
+      ],
+      "telegram": [
+        { "type": "group", "id": "-100xxx", "name": "通知群" }
+      ]
+    },
     "onSuccess": true,
     "onFailure": true
   },
@@ -300,3 +347,18 @@ ERROR    # 错误信息
 ```
 
 如果配置格式错误，系统会自动使用默认配置并提示错误信息。
+
+---
+
+## 获取帮助
+
+如果以上方法无法解决问题：
+
+1. 查看完整日志文件
+2. 在 GitHub 提交 Issue
+3. 联系作者：jack698698@gmail.com
+
+---
+
+**文档版本**：v1.0.1  
+**更新日期**：2026-03-26

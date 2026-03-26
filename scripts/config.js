@@ -13,9 +13,12 @@ const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 const LOG_FILE = path.join(CONFIG_DIR, 'backup.log');
 const BACKUPS_DIR = path.join(CONFIG_DIR, 'backups');
 
+// OpenClaw 配置文件路径
+const OPENCLAW_CONFIG_FILE = path.join(os.homedir(), '.openclaw', 'openclaw.json');
+
 // 默认配置
 const DEFAULT_CONFIG = {
-  version: "1.0.0.20260326",
+  version: "1.0.1",
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
   
@@ -52,6 +55,7 @@ const DEFAULT_CONFIG = {
   notification: {
     enabled: true,
     channels: ["feishu"],
+    targets: {},
     onSuccess: true,
     onFailure: true
   },
@@ -94,7 +98,7 @@ async function loadConfig() {
     
     const config = await fs.readJson(CONFIG_FILE);
     
-    // 配置迁移（未来版本需要时添加）
+    // 配置迁移（检查并补全新字段）
     const migratedConfig = migrateConfig(config);
     
     return migratedConfig;
@@ -181,14 +185,31 @@ function validateConfig(config) {
  * 配置迁移
  */
 function migrateConfig(config) {
-  const currentVersion = config.version || '1.0.0';
+  let needsSave = false;
   
-  // 未来版本迁移逻辑
-  // if (currentVersion === '1.0.0') {
-  //   // 迁移到 1.1.0
-  //   config.newField = 'default';
-  //   config.version = '1.1.0';
-  // }
+  // v1.0.0 -> v1.0.1: 新增 notification.targets 字段
+  if (!config.notification) {
+    config.notification = { ...DEFAULT_CONFIG.notification };
+    needsSave = true;
+  }
+  
+  if (!config.notification.targets) {
+    config.notification.targets = {};
+    needsSave = true;
+  }
+  
+  // 更新版本号
+  if (config.version !== DEFAULT_CONFIG.version) {
+    config.version = DEFAULT_CONFIG.version;
+    needsSave = true;
+  }
+  
+  // 如果有变更，保存配置
+  if (needsSave) {
+    saveConfig(config).catch(err => {
+      console.error(`[Config] 配置迁移保存失败: ${err.message}`);
+    });
+  }
   
   return config;
 }
@@ -246,6 +267,121 @@ function deepMerge(target, source) {
   return result;
 }
 
+/**
+ * 加载 OpenClaw 配置
+ * 从 ~/.openclaw/openclaw.json 读取渠道配置和绑定信息
+ */
+async function loadOpenClawConfig() {
+  try {
+    if (!(await fs.pathExists(OPENCLAW_CONFIG_FILE))) {
+      return { channels: {}, bindings: [], availableTargets: {} };
+    }
+    
+    const config = await fs.readJson(OPENCLAW_CONFIG_FILE);
+    
+    const result = {
+      channels: {},
+      bindings: config.bindings || [],
+      availableTargets: {}
+    };
+    
+    // 解析渠道配置
+    if (config.channels) {
+      // Feishu
+      if (config.channels.feishu && config.channels.feishu.enabled) {
+        result.channels.feishu = {
+          enabled: true,
+          appId: config.channels.feishu.appId
+        };
+        result.availableTargets.feishu = [];
+      }
+      
+      // Telegram
+      if (config.channels.telegram && config.channels.telegram.enabled) {
+        result.channels.telegram = {
+          enabled: true,
+          groups: config.channels.telegram.groups || {}
+        };
+        result.availableTargets.telegram = [];
+      }
+      
+      // Discord
+      if (config.channels.discord && config.channels.discord.enabled) {
+        result.channels.discord = {
+          enabled: true
+        };
+        result.availableTargets.discord = [];
+      }
+      
+      // Slack
+      if (config.channels.slack && config.channels.slack.enabled) {
+        result.channels.slack = {
+          enabled: true
+        };
+        result.availableTargets.slack = [];
+      }
+    }
+    
+    // 从 bindings 解析可用的推送目标
+    if (config.bindings && Array.isArray(config.bindings)) {
+      for (const binding of config.bindings) {
+        if (binding.match && binding.match.channel && binding.match.peer) {
+          const channel = binding.match.channel;
+          const peer = binding.match.peer;
+          
+          if (!result.availableTargets[channel]) {
+            result.availableTargets[channel] = [];
+          }
+          
+          // 添加到可用目标列表
+          result.availableTargets[channel].push({
+            type: peer.kind, // 'group' or 'user'
+            id: peer.id,
+            name: binding.agentId ? `${binding.agentId} Agent` : peer.id,
+            agentId: binding.agentId
+          });
+        }
+      }
+    }
+    
+    // 从 Telegram groups 配置解析
+    if (config.channels?.telegram?.groups) {
+      const tgGroups = config.channels.telegram.groups;
+      for (const groupId in tgGroups) {
+        if (tgGroups[groupId].enabled) {
+          if (!result.availableTargets.telegram) {
+            result.availableTargets.telegram = [];
+          }
+          result.availableTargets.telegram.push({
+            type: 'group',
+            id: groupId,
+            name: `Telegram群组 ${groupId}`
+          });
+        }
+      }
+    }
+    
+    return result;
+  } catch (error) {
+    console.error(`[Config] 加载 OpenClaw 配置失败: ${error.message}`);
+    return { channels: {}, bindings: [], availableTargets: {} };
+  }
+}
+
+/**
+ * 检测渠道是否已配置
+ */
+function isChannelConfigured(channel, openclawConfig) {
+  return openclawConfig.channels[channel]?.enabled === true;
+}
+
+/**
+ * 获取渠道可用的推送目标
+ */
+function getChannelTargets(channel, openclawConfig) {
+  return openclawConfig.availableTargets[channel] || [];
+}
+
 module.exports = {
   loadConfig,
   saveConfig,
@@ -255,6 +391,9 @@ module.exports = {
   configExists,
   ensureConfigDir,
   getConfigPaths,
+  loadOpenClawConfig,
+  isChannelConfigured,
+  getChannelTargets,
   DEFAULT_CONFIG,
   CONFIG_DIR,
   CONFIG_FILE,

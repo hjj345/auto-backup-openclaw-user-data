@@ -1,6 +1,7 @@
 /**
  * 清理模块
  * 负责清理旧备份文件
+ * v1.0.1 - 只处理本 skill 产生的备份文件
  */
 
 const fs = require('fs-extra');
@@ -28,11 +29,11 @@ class Cleaner {
       
       await info('Cleaner', '开始清理旧备份...');
       
-      // 获取所有备份文件
+      // 获取本 skill 的备份文件
       const backups = await this.getBackupFiles();
       
       if (backups.length === 0) {
-        await info('Cleaner', '没有找到备份文件');
+        await info('Cleaner', '没有找到本 skill 的备份文件');
         return { deleted: 0, kept: 0, skipped: false };
       }
       
@@ -76,11 +77,13 @@ class Cleaner {
   }
 
   /**
-   * 获取所有备份文件
+   * 获取本 skill 的备份文件
+   * 只返回文件名以配置的前缀开头的备份文件
    */
   async getBackupFiles() {
     try {
       const outputDir = this.config.output.path;
+      const prefix = this.config.output.naming.prefix || 'auto-backup-openclaw-user-data';
       
       if (!(await fs.pathExists(outputDir))) {
         return [];
@@ -90,7 +93,11 @@ class Cleaner {
       const backups = [];
       
       for (const file of files) {
+        // 只处理 .zip 文件
         if (!file.endsWith('.zip')) continue;
+        
+        // 只处理以本 skill 前缀开头的文件
+        if (!file.startsWith(prefix)) continue;
         
         const filePath = path.join(outputDir, file);
         
