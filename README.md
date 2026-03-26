@@ -169,7 +169,7 @@ auto-backup-openclaw-user-data/
 
 ```bash
 # 克隆仓库
-git clone https://github.com/yourusername/auto-backup-openclaw-user-data.git
+git clone https://github.com/hjj345/auto-backup-openclaw-user-data.git
 
 # 安装依赖
 cd auto-backup-openclaw-user-data
