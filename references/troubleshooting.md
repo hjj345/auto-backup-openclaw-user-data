@@ -390,5 +390,5 @@ Get-Content "$env:USERPROFILE\.openclaw\workspace\Auto-Backup-Openclaw-User-Data
 
 ---
 
-**文档版本**：v1.0.1  
-**更新日期**：2026-03-26
+**文档版本**：v1.0.2  
+**更新日期**：2026-03-31

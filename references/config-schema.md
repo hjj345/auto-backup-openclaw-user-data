@@ -16,9 +16,9 @@
 
 ```json
 {
-  "version": "1.0.1",
-  "createdAt": "2026-03-26T15:00:00+08:00",
-  "updatedAt": "2026-03-26T15:00:00+08:00",
+  "version": "1.0.2",
+  "createdAt": "2026-03-31T15:00:00+08:00",
+  "updatedAt": "2026-03-31T15:00:00+08:00",
   
   "backup": { ... },
   "schedule": { ... },
@@ -37,7 +37,7 @@
 
 | 字段 | 类型 | 必填 | 默认值 | 说明 |
 |------|------|------|--------|------|
-| `version` | string | 是 | "1.0.0" | 配置文件版本 |
+| `version` | string | 是 | "1.0.2" | 配置文件版本 |
 | `createdAt` | string | 否 | - | 创建时间（ISO 8601） |
 | `updatedAt` | string | 否 | - | 最后更新时间（ISO 8601） |
 
@@ -189,8 +189,8 @@ slack        # Slack
 {
   "targets": {
     "feishu": [
-      { "type": "group", "id": "oc_xxx", "name": "技术开发中心" },
-      { "type": "user", "id": "ou_xxx", "name": "黄总" }
+      { "type": "group", "id": "oc_xxx", "name": "开发群" },
+      { "type": "user", "id": "ou_xxx", "name": "主人" }
     ],
     "telegram": [
       { "type": "group", "id": "-100xxx", "name": "通知群" },
@@ -277,13 +277,13 @@ ERROR    # 错误信息
 
 ```json
 {
-  "version": "1.0.1",
-  "createdAt": "2026-03-26T15:00:00+08:00",
-  "updatedAt": "2026-03-26T15:00:00+08:00",
+  "version": "1.0.2",
+  "createdAt": "2026-03-31T15:00:00+08:00",
+  "updatedAt": "2026-03-31T15:00:00+08:00",
   
   "backup": {
     "mode": "partial",
-    "targets": ["workspace", "workspace-tech", "memory"],
+    "targets": ["workspace", "workspace-1", "memory"],
     "exclude": ["logs", "cache", "tmp", "node_modules"],
     "excludePatterns": ["*.log", "*.tmp", ".DS_Store", "Thumbs.db"]
   },
@@ -316,7 +316,7 @@ ERROR    # 错误信息
     "channels": ["feishu", "telegram"],
     "targets": {
       "feishu": [
-        { "type": "group", "id": "oc_xxx", "name": "技术开发中心" }
+        { "type": "group", "id": "oc_xxx", "name": "开发群" }
       ],
       "telegram": [
         { "type": "group", "id": "-100xxx", "name": "通知群" }
@@ -360,5 +360,5 @@ ERROR    # 错误信息
 
 ---
 
-**文档版本**：v1.0.1  
-**更新日期**：2026-03-26
+**文档版本**：v1.0.2  
+**更新日期**：2026-03-31
