@@ -53,7 +53,7 @@ OpenClaw 用户数据自动备份技能。
     "channels": ["feishu", "telegram"],
     "targets": {
       "feishu": [
-        { "type": "group", "id": "oc_xxx", "name": "技术开发中心" },
+        { "type": "group", "id": "oc_xxx", "name": "开发群" },
         { "type": "user", "id": "ou_xxx", "name": "用户名" }
       ],
       "telegram": [

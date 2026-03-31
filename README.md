@@ -2,7 +2,7 @@
 
 > OpenClaw 用户数据自动备份技能
 
-[![Version](https://img.shields.io/badge/version-1.0.1.20260326-blue.svg)](https://github.com/yourusername/auto-backup-openclaw-user-data)
+[![Version](https://img.shields.io/badge/version-1.0.1.20260326-blue.svg)](https://github.com/hjj345/auto-backup-openclaw-user-data)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![OpenClaw](https://img.shields.io/badge/OpenClaw-v2026.3.1+-purple.svg)](https://openclaw.ai)
 

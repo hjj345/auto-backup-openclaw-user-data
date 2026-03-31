@@ -368,8 +368,8 @@ openclaw skill install auto-backup-openclaw-user-data
     "channels": ["feishu", "telegram"],
     "targets": {
       "feishu": [
-        { "type": "group", "id": "oc_xxx", "name": "技术开发中心" },
-        { "type": "user", "id": "ou_xxx", "name": "黄总" }
+        { "type": "group", "id": "oc_xxx", "name": "开发群" },
+        { "type": "user", "id": "ou_xxx", "name": "主人" }
       ],
       "telegram": [
         { "type": "group", "id": "-100xxx", "name": "通知群" }

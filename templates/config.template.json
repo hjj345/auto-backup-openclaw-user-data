@@ -5,7 +5,7 @@
   
   "backup": {
     "mode": "full",
-    "targets": ["workspace", "workspace-news", "workspace-hr", "workspace-tech", "memory"],
+    "targets": ["workspace", "workspace-1", "workspace-2", "workspace-3", "memory",……],
     "exclude": ["logs", "cache", "tmp", "node_modules"],
     "excludePatterns": ["*.log", "*.tmp", ".DS_Store", "Thumbs.db"]
   },

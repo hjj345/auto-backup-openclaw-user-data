@@ -13,7 +13,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/auto-backup-openclaw-user-data"
+    "url": "https://github.com/hjj345/auto-backup-openclaw-user-data"
   },
   "engines": {
     "node": ">=18.0.0"
