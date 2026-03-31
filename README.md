@@ -2,7 +2,7 @@
 
 > OpenClaw 用户数据自动备份技能
 
-[![Version](https://img.shields.io/badge/version-1.0.1.20260326-blue.svg)](https://github.com/hjj345/auto-backup-openclaw-user-data)
+[![Version](https://img.shields.io/badge/version-1.0.2.20260331-blue.svg)](https://github.com/hjj345/auto-backup-openclaw-user-data)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![OpenClaw](https://img.shields.io/badge/OpenClaw-v2026.3.1+-purple.svg)](https://openclaw.ai)
 
@@ -15,8 +15,9 @@
 ## 功能特性
 
 - ✅ **自动备份** - 定时备份 `.openclaw` 目录
-- ✅ **选择性备份** - 支持全量或部分备份
+- ✅ **选择性备份** - 支持全量或部分备份（交互式选择文件/文件夹）
 - ✅ **ZIP 压缩** - 自动压缩并按规则命名
+- ✅ **定时执行** - 支持 HEARTBEAT 心跳和 Cron 定时任务两种方式
 - ✅ **日志记录** - 完整记录执行过程
 - ✅ **消息通知** - 支持多渠道推送结果
 - ✅ **保留策略** - 自动清理旧备份
@@ -83,6 +84,46 @@ openclaw skill install https://github.com/hjj345/auto-backup-openclaw-user-data
 | `/backup_config` | 配置向导 | `[1-4]` |
 | `/backup_list` | 列出备份文件 | `--all` |
 | `/backup_clean` | 清理旧备份 | `--preview`, `--confirm` |
+
+## 定时任务配置
+
+本 skill 支持两种定时执行方式，请根据实际需求选择：
+
+### 方式对比
+
+| 特性 | HEARTBEAT 心跳 | Cron 定时任务 |
+|------|---------------|---------------|
+| 定时精度 | 约 30 分钟漂移 | 精确到分钟 |
+| 运行上下文 | 主会话（共享） | 隔离会话 |
+| 配置复杂度 | 较简单 | 需 CLI 配置 |
+| 推送控制 | 需手动实现 | 内置支持 |
+| 适用场景 | 周期性监控检查 | 精确时间执行 |
+
+### 方式一：HEARTBEAT 心跳（推荐新手）
+
+适用于周期性监控检查，不要求精确执行时间。
+
+**配置步骤**：
+
+1. 查看项目根目录中的 `HEARTBEAT_prompt_example.md` 文件
+2. 根据模板内容，修改你的 Agent 工作区的 `HEARTBEAT.md` 文件
+3. 修改模板中的配置变量（备份时间、skill 路径、推送目标等）
+4. 确保 Gateway 正在运行
+
+**详细说明**：见 [HEARTBEAT_prompt_example.md](HEARTBEAT_prompt_example.md)
+
+### 方式二：Cron 定时任务（推荐高级用户）
+
+适用于需要精确时间执行的场景（如每天凌晨 3:20）。
+
+**配置步骤**：
+
+1. 查看项目根目录中的 `cron_prompt_example.md` 文件
+2. 准备配置信息（skill 路径、飞书群 ID、Telegram Bot Token 等）
+3. 编辑 `~/.openclaw/cron/jobs.json` 或使用 CLI 命令添加定时任务
+4. 重启 Gateway
+
+**详细说明**：见 [cron_prompt_example.md](cron_prompt_example.md)
 
 ## 配置
 
@@ -194,6 +235,16 @@ npm test
 - Email: jack698698@gmail.com
 
 ## 更新日志
+
+### v1.0.2.20260331 (2026-03-31)
+
+- 新增：HEARTBEAT 心跳定时任务模板（`HEARTBEAT_prompt_example.md`）
+- 新增：Cron 定时任务模板（`cron_prompt_example.md`）
+- 新增：选择性备份交互式文件选择功能
+- 新增：文件选择确认/重新选择功能
+- 优化：交互式配置步骤从 6 步调整为 7 步（新增文件选择步骤）
+- 优化：选择性备份时列出 `~/.openclaw/` 目录文件清单
+- 文档：README.md 和 USAGE.md 新增定时任务配置说明
 
 ### v1.0.1.20260326 (2026-03-26)
 

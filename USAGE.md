@@ -10,9 +10,11 @@
 2. [安装](#安装)
 3. [使用方法](#使用方法)
 4. [命令说明](#命令说明)
-5. [配置说明](#配置说明)
-6. [消息通知配置](#消息通知配置)
-7. [常见问题](#常见问题)
+5. [交互式配置](#交互式配置)
+6. [定时任务配置](#定时任务配置)
+7. [配置说明](#配置说明)
+8. [消息通知配置](#消息通知配置)
+9. [常见问题](#常见问题)
 
 ---
 
@@ -163,9 +165,9 @@ openclaw skill install auto-backup-openclaw-user-data
 [4] 查看当前配置
 ```
 
-#### 交互式配置步骤（6步）
+#### 交互式配置步骤（7步）
 
-**Step 1/6: 备份范围**
+**Step 1/7: 备份范围**
 ```
 [1] 全量备份 .openclaw
 [2] 选择性备份
@@ -173,7 +175,58 @@ openclaw skill install auto-backup-openclaw-user-data
 请回复选项编号：
 ```
 
-**Step 2/6: 备份时间**
+**如果选择"选择性备份"（Step 1/7 - Step 1.2/7）**：
+
+系统会列出 `~/.openclaw/` 目录下的文件和文件夹：
+```
+Step 1/7: 选择备份文件
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 文件列表（目录 + 文件）：
+
+📁 文件夹：
+  [1] [ ] 📁 workspace
+  [2] [ ] 📁 workspace-1
+  [3] [ ] 📁 workspace-2
+  [4] [ ] 📁 workspace-3
+
+📄 文件：
+  [5] [ ] 📄 openclaw.json
+  [6] [ ] 📄 openclaw.json.bak
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📝 选择说明：
+  选择样式：输入编号，用空格分隔，如：1 3 5 7
+  示例：选择第 1、3、5 项 → 输入 1 3 5
+
+请输入要备份的文件/文件夹编号：1 2 3 4
+```
+
+用户选择后，进入确认界面：
+```
+Step 1/7: 确认选择
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+您已选择以下文件/文件夹：
+
+  [√] 📁 workspace
+  [√] 📁 workspace-news
+  [√] 📁 workspace-hr
+  [√] 📁 workspace-tech
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+共选择 4 项
+
+请确认选择：
+  [1] 确认，继续配置
+  [2] 取消，重新选择
+
+请回复 1 或 2：
+```
+
+**Step 2/7: 备份时间**
 ```
 当前设置: 每天凌晨 3:00
 
@@ -189,7 +242,7 @@ openclaw skill install auto-backup-openclaw-user-data
 请输入执行时间（格式：HH:MM，如 03:00）：
 ```
 
-**Step 3/6: 存储路径**
+**Step 3/7: 存储路径**
 ```
 当前设置: ~/.openclaw/workspace/Auto-Backup-Openclaw-User-Data/backups
 
@@ -200,7 +253,7 @@ openclaw skill install auto-backup-openclaw-user-data
 请回复 y 或 n：
 ```
 
-**Step 4/6: 保留策略**
+**Step 4/7: 保留策略**
 ```
 请选择清理模式：
 
@@ -213,7 +266,7 @@ openclaw skill install auto-backup-openclaw-user-data
 请回复选项编号：
 ```
 
-**Step 5/6: 通知渠道**
+**Step 5/7: 通知渠道**
 ```
 正在检测 OpenClaw 已配置的渠道...
 
@@ -226,7 +279,7 @@ openclaw skill install auto-backup-openclaw-user-data
 请选择要启用的通知渠道（输入编号，可多选，如：1 2）：
 ```
 
-**Step 6/6: 配置推送目标**
+**Step 6/7: 配置推送目标**
 
 对于每个选择的渠道，会显示可用的推送目标：
 
@@ -248,7 +301,14 @@ openclaw skill install auto-backup-openclaw-user-data
 ✅ 配置完成！
 ----------------------------------------
 
-备份范围: 全量备份
+备份范围: 选择性备份
+
+已选项目标：
+  - workspace
+  - workspace-1
+  - workspace-2
+  - workspace-3
+
 执行时间: 每天 03:00
 保留策略: 10 份
 通知渠道: 飞书
@@ -323,6 +383,54 @@ openclaw skill install auto-backup-openclaw-user-data
 
 使用 --confirm 执行实际清理
 ```
+
+---
+
+## 定时任务配置
+
+本 skill 支持两种定时执行方式，请根据实际需求选择：
+
+### 方式对比
+
+| 特性 | HEARTBEAT 心跳 | Cron 定时任务 |
+|------|---------------|---------------|
+| 定时精度 | 约 30 分钟漂移 | 精确到分钟 |
+| 运行上下文 | 主会话（共享） | 隔离会话 |
+| 配置复杂度 | 较简单 | 需 CLI 配置 |
+| 推送控制 | 需手动实现 | 内置支持 |
+| 适用场景 | 周期性监控检查 | 精确时间执行 |
+
+### 方式一：HEARTBEAT 心跳（推荐新手）
+
+适用于周期性监控检查，不要求精确执行时间。
+
+**配置步骤**：
+
+1. 查看项目根目录中的 `HEARTBEAT_prompt_example.md` 文件
+2. 根据模板内容，修改你的 Agent 工作区的 `HEARTBEAT.md` 文件
+3. 修改模板中的配置变量（备份时间、skill 路径、推送目标等）
+4. 确保 Gateway 正在运行：`openclaw gateway start`
+
+**详细说明**：见 [HEARTBEAT_prompt_example.md](HEARTBEAT_prompt_example.md)
+
+### 方式二：Cron 定时任务（推荐高级用户）
+
+适用于需要精确时间执行的场景（如每天凌晨 3:20）。
+
+**配置步骤**：
+
+1. 查看项目根目录中的 `cron_prompt_example.md` 文件
+2. 准备配置信息：
+   - skill 脚本目录路径
+   - 飞书群组 ID（格式：`oc_xxx`）
+   - Telegram Bot Token 和 Chat ID
+3. 编辑 `~/.openclaw/cron/jobs.json` 或使用 CLI 命令：
+   ```bash
+   openclaw cron add --name "每日备份" --cron "20 3 * * *" ...
+   ```
+4. 重启 Gateway：`openclaw gateway restart`
+
+**详细说明**：见 [cron_prompt_example.md](cron_prompt_example.md)
 
 ---
 

@@ -1,7 +1,7 @@
 /**
  * CLI 模块
  * 命令行接口入口
- * v1.0.1 - 增加推送目标配置
+ * v1.0.2 - 增加选择性备份文件选择交互
  */
 
 const fs = require('fs-extra');
@@ -328,7 +328,7 @@ class CLI {
     output.push('📋 交互式配置向导');
     output.push('━'.repeat(40));
     output.push('');
-    output.push('Step 1/6: 备份范围');
+    output.push('Step 1/7: 备份范围');
     output.push('  [1] 全量备份 .openclaw');
     output.push('  [2] 选择性备份');
     output.push('');
@@ -339,7 +339,7 @@ class CLI {
     
     return this.outputSuccess(output.join('\n'), { 
       step: 1, 
-      total: 6,
+      total: 7,
       type: 'interactive' 
     });
   }
@@ -356,36 +356,34 @@ class CLI {
     switch (step) {
       case 1: // 备份范围
         if (input === '1') {
+          // 全量备份 - 直接进入下一步
           state.mode = 'full';
+          return this.askBackupTime(state);
         } else if (input === '2') {
+          // 选择性备份 - 进入文件选择流程
           state.mode = 'partial';
+          return this.askBackupFiles(state);
         } else {
           return this.outputError('请输入 1 或 2');
         }
         
-        output.push('Step 2/6: 备份时间');
-        output.push('━'.repeat(40));
-        output.push('');
-        output.push('当前设置: 每天凌晨 3:00');
-        output.push('');
-        output.push('是否修改执行时间？');
-        output.push('  [y] 是，修改时间');
-        output.push('  [n] 否，保持默认');
-        output.push('');
-        output.push('请回复 y 或 n：');
+      // ===== 选择性备份文件选择流程 =====
+      case 1.1: // 文件选择输入
+        return this.handleFileSelection(input, state);
         
-        return this.outputSuccess(output.join('\n'), { step: 2, total: 6, state, type: 'interactive' });
+      case 1.2: // 确认选择
+        return this.handleFileConfirm(input, state);
         
       case 2: // 备份时间
         if (input.toLowerCase() === 'y') {
-          output.push('Step 2/6: 备份时间');
+          output.push('Step 2/7: 备份时间');
           output.push('━'.repeat(40));
           output.push('');
           output.push('请输入执行时间（格式：HH:MM，如 03:00）：');
           output.push('');
           output.push('请直接回复时间：');
           
-          return this.outputSuccess(output.join('\n'), { step: 2.1, total: 6, state, type: 'interactive' });
+          return this.outputSuccess(output.join('\n'), { step: 2.1, total: 7, state, type: 'interactive' });
         }
         
         // 继续下一步
@@ -402,7 +400,7 @@ class CLI {
         
       case 3: // 存储路径选择
         if (input.toLowerCase() === 'y') {
-          output.push('Step 3/6: 存储路径');
+          output.push('Step 3/7: 存储路径');
           output.push('━'.repeat(40));
           output.push('');
           output.push('请输入新的备份存储路径：');
@@ -413,7 +411,7 @@ class CLI {
           output.push('');
           output.push('请直接回复路径，或回复 c 取消：');
           
-          return this.outputSuccess(output.join('\n'), { step: 3.1, total: 6, state, type: 'interactive' });
+          return this.outputSuccess(output.join('\n'), { step: 3.1, total: 7, state, type: 'interactive' });
         }
         
         // 使用默认路径
@@ -430,17 +428,17 @@ class CLI {
       case 4: // 保留策略选择
         if (input === '1') {
           state.retentionMode = 'days';
-          output.push('Step 4/6: 保留策略');
+          output.push('Step 4/7: 保留策略');
           output.push('━'.repeat(40));
           output.push('');
           output.push('请输入保留天数（默认 30 天）：');
           output.push('');
           output.push('请直接回复数字，或回复 d 使用默认值：');
           
-          return this.outputSuccess(output.join('\n'), { step: 4.1, total: 6, state, type: 'interactive' });
+          return this.outputSuccess(output.join('\n'), { step: 4.1, total: 7, state, type: 'interactive' });
         } else if (input === '2') {
           state.retentionMode = 'count';
-          output.push('Step 4/6: 保留策略');
+          output.push('Step 4/7: 保留策略');
           output.push('━'.repeat(40));
           output.push('');
           output.push('请输入保留份数（默认 10 份）：');
@@ -449,7 +447,7 @@ class CLI {
           output.push('');
           output.push('请直接回复数字，或回复 d 使用默认值：');
           
-          return this.outputSuccess(output.join('\n'), { step: 4.2, total: 6, state, type: 'interactive' });
+          return this.outputSuccess(output.join('\n'), { step: 4.2, total: 7, state, type: 'interactive' });
         }
         return this.outputError('请输入 1 或 2');
         
@@ -517,12 +515,203 @@ class CLI {
   }
 
   /**
+   * 询问备份时间
+   */
+  async askBackupTime(state) {
+    const output = [];
+    
+    output.push('Step 2/6: 备份时间');
+    output.push('━'.repeat(40));
+    output.push('');
+    output.push('当前设置: 每天凌晨 3:00');
+    output.push('');
+    output.push('是否修改执行时间？');
+    output.push('  [y] 是，修改时间');
+    output.push('  [n] 否，保持默认');
+    output.push('');
+    output.push('请回复 y 或 n：');
+    
+    return this.outputSuccess(output.join('\n'), { step: 2, total: 7, state, type: 'interactive' });
+  }
+
+  /**
+   * 询问选择性备份文件（新增）
+   * 列出 ~/.openclaw/ 目录下的文件和文件夹供用户选择
+   */
+  async askBackupFiles(state) {
+    const output = [];
+    
+    output.push('Step 1/7: 选择备份文件');
+    output.push('━'.repeat(40));
+    output.push('');
+    output.push('正在读取 ~/.openclaw/ 目录...');
+    output.push('');
+    
+    try {
+      // 读取 OpenClaw 根目录下的文件和文件夹
+      const openclawRoot = OPENCLAW_ROOT;
+      const entries = await fs.readdir(openclawRoot, { withFileTypes: true });
+      
+      // 排除默认不需要备份的目录
+      const excludeDefault = ['logs', 'cache', 'tmp', 'node_modules', 'completions', 'delivery-queue', 'exec-approvals.json'];
+      
+      // 过滤并分类
+      const folders = [];
+      const files = [];
+      
+      for (const entry of entries) {
+        if (excludeDefault.includes(entry.name)) continue;
+        if (entry.name.startsWith('.')) continue; // 隐藏文件跳过
+        
+        if (entry.isDirectory()) {
+          folders.push({
+            name: entry.name,
+            type: 'folder',
+            selected: false
+          });
+        } else if (entry.isFile()) {
+          files.push({
+            name: entry.name,
+            type: 'file',
+            selected: false
+          });
+        }
+      }
+      
+      // 排序
+      folders.sort((a, b) => a.name.localeCompare(b.name));
+      files.sort((a, b) => a.name.localeCompare(b.name));
+      
+      // 保存到 state
+      state.availableFiles = [...folders, ...files];
+      
+      if (state.availableFiles.length === 0) {
+        output.push('⚠️ 未找到可备份的文件或文件夹');
+        output.push('');
+        output.push('请检查 ~/.openclaw/ 目录是否存在');
+        output.push('');
+        output.push('按任意键返回上一步...');
+        return this.outputSuccess(output.join('\n'), { step: 1, total: 7, state, type: 'interactive' });
+      }
+      
+      output.push('📋 文件列表（目录 + 文件）：');
+      output.push('');
+      output.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      
+      // 显示文件夹
+      if (folders.length > 0) {
+        output.push('');
+        output.push('📁 文件夹：');
+        folders.forEach((item, idx) => {
+          output.push(`  [${idx + 1}] [ ] 📁 ${item.name}`);
+        });
+      }
+      
+      // 显示文件
+      if (files.length > 0) {
+        output.push('');
+        output.push('📄 文件：');
+        files.forEach((item, idx) => {
+          const fileIdx = folders.length + idx + 1;
+          output.push(`  [${fileIdx}] [ ] 📄 ${item.name}`);
+        });
+      }
+      
+      output.push('');
+      output.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      output.push('');
+      output.push('📝 选择说明：');
+      output.push('');
+      output.push('  选择样式：输入编号，用空格分隔，如：1 3 5 7');
+      output.push('  示例：选择第 1、3、5 项 → 输入 1 3 5');
+      output.push('');
+      output.push('  已选择后会显示：[×] 或 [√]');
+      output.push('');
+      output.push('请输入要备份的文件/文件夹编号：');
+      
+      return this.outputSuccess(output.join('\n'), { step: 1.1, total: 7, state, type: 'interactive' });
+      
+    } catch (err) {
+      output.push(`❌ 读取目录失败: ${err.message}`);
+      output.push('');
+      output.push('按任意键返回上一步...');
+      return this.outputSuccess(output.join('\n'), { step: 1, total: 7, state, type: 'interactive' });
+    }
+  }
+
+  /**
+   * 处理文件选择输入（新增）
+   */
+  async handleFileSelection(input, state) {
+    const output = [];
+    
+    // 解析用户输入的编号
+    const selectedIndices = input.split(/\s+/)
+      .map(s => parseInt(s.trim()))
+      .filter(n => !isNaN(n) && n > 0 && n <= state.availableFiles.length);
+    
+    if (selectedIndices.length === 0) {
+      return this.outputError('请输入有效的编号（如：1 3 5）');
+    }
+    
+    // 更新选择状态
+    state.selectedFiles = selectedIndices.map(idx => state.availableFiles[idx - 1]);
+    
+    // 显示确认界面
+    output.push('Step 1/7: 确认选择');
+    output.push('━'.repeat(40));
+    output.push('');
+    output.push('您已选择以下文件/文件夹：');
+    output.push('');
+    output.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    
+    state.selectedFiles.forEach((item, idx) => {
+      const icon = item.type === 'folder' ? '📁' : '📄';
+      output.push(`  [√] ${icon} ${item.name}`);
+    });
+    
+    output.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    output.push('');
+    output.push(`共选择 ${state.selectedFiles.length} 项`);
+    output.push('');
+    output.push('请确认选择：');
+    output.push('  [1] 确认，继续配置');
+    output.push('  [2] 取消，重新选择');
+    output.push('');
+    output.push('请回复 1 或 2：');
+    
+    return this.outputSuccess(output.join('\n'), { step: 1.2, total: 7, state, type: 'interactive' });
+  }
+
+  /**
+   * 处理文件确认（新增）
+   */
+  async handleFileConfirm(input, state) {
+    const output = [];
+    
+    if (input === '1') {
+      // 确认选择 - 进入下一步
+      // 将选择的文件名保存到 state.targets
+      state.backupTargets = state.selectedFiles.map(f => f.name);
+      return this.askBackupTime(state);
+      
+    } else if (input === '2') {
+      // 重新选择 - 返回文件列表
+      state.selectedFiles = [];
+      return this.askBackupFiles(state);
+      
+    } else {
+      return this.outputError('请输入 1 或 2');
+    }
+  }
+
+  /**
    * 询问存储路径
    */
   async askStoragePath(state) {
     const output = [];
     
-    output.push('Step 3/6: 存储路径');
+    output.push('Step 3/7: 存储路径');
     output.push('━'.repeat(40));
     output.push('');
     output.push('当前设置: ');
@@ -534,7 +723,7 @@ class CLI {
     output.push('');
     output.push('请回复 y 或 n：');
     
-    return this.outputSuccess(output.join('\n'), { step: 3, total: 6, state, type: 'interactive' });
+    return this.outputSuccess(output.join('\n'), { step: 3, total: 7, state, type: 'interactive' });
   }
 
   /**
@@ -543,7 +732,7 @@ class CLI {
   async askRetention(state) {
     const output = [];
     
-    output.push('Step 4/6: 保留策略');
+    output.push('Step 4/7: 保留策略');
     output.push('━'.repeat(40));
     output.push('');
     output.push('请选择清理模式：');
@@ -556,7 +745,7 @@ class CLI {
     output.push('');
     output.push('请回复选项编号：');
     
-    return this.outputSuccess(output.join('\n'), { step: 4, total: 6, state, type: 'interactive' });
+    return this.outputSuccess(output.join('\n'), { step: 4, total: 7, state, type: 'interactive' });
   }
 
   /**
@@ -568,7 +757,7 @@ class CLI {
     // 加载 OpenClaw 配置
     const openclawConfig = await loadOpenClawConfig();
     
-    output.push('Step 5/6: 通知渠道');
+    output.push('Step 5/7: 通知渠道');
     output.push('━'.repeat(40));
     output.push('');
     output.push('正在检测 OpenClaw 已配置的渠道...');
@@ -610,7 +799,7 @@ class CLI {
     output.push('');
     output.push('请选择要启用的通知渠道（输入编号，可多选，如：1 2）：');
     
-    return this.outputSuccess(output.join('\n'), { step: 5, total: 6, state, type: 'interactive' });
+    return this.outputSuccess(output.join('\n'), { step: 5, total: 7, state, type: 'interactive' });
   }
 
   /**
@@ -621,7 +810,7 @@ class CLI {
     const channel = state.selectedChannels[state.channelIndex];
     const channelNames = { feishu: '飞书', telegram: 'Telegram', discord: 'Discord', slack: 'Slack' };
     
-    output.push(`Step 6/6: 配置 ${channelNames[channel]} 推送目标`);
+    output.push(`Step 6/7: 配置 ${channelNames[channel]} 推送目标`);
     output.push('━'.repeat(40));
     output.push('');
     
@@ -656,7 +845,7 @@ class CLI {
       state.availableTargets = targets;
     }
     
-    return this.outputSuccess(output.join('\n'), { step: 6, total: 6, state, type: 'interactive' });
+    return this.outputSuccess(output.join('\n'), { step: 6, total: 7, state, type: 'interactive' });
   }
 
   /**
@@ -671,6 +860,11 @@ class CLI {
       // 更新配置
       if (state.mode) {
         config.backup.mode = state.mode;
+      }
+      
+      // 保存选择性备份的目标文件（新增）
+      if (state.mode === 'partial' && state.backupTargets) {
+        config.backup.targets = state.backupTargets;
       }
       
       if (state.time) {
@@ -706,7 +900,18 @@ class CLI {
       output.push('');
       
       if (state.mode) {
-        output.push(`备份范围: ${state.mode === 'full' ? '全量备份' : '选择性备份'}`);
+        if (state.mode === 'full') {
+          output.push('备份范围: 全量备份');
+        } else {
+          output.push('备份范围: 选择性备份');
+          if (state.backupTargets && state.backupTargets.length > 0) {
+            output.push('');
+            output.push('已选项目标：');
+            state.backupTargets.forEach(t => {
+              output.push(`  - ${t}`);
+            });
+          }
+        }
       }
       if (state.time) {
         output.push(`执行时间: 每天 ${state.time}`);
