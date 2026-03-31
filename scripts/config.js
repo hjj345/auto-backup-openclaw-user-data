@@ -18,13 +18,13 @@ const OPENCLAW_CONFIG_FILE = path.join(os.homedir(), '.openclaw', 'openclaw.json
 
 // 默认配置
 const DEFAULT_CONFIG = {
-  version: "1.0.1",
+  version: "1.0.2",
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
   
   backup: {
     mode: "full",
-    targets: ["workspace", "workspace-news", "workspace-hr", "workspace-tech", "memory"],
+    targets: ["workspace", "workspace-1", "workspace-2", "workspace-2", "memory",……],
     exclude: ["logs", "cache", "tmp", "node_modules"],
     excludePatterns: ["*.log", "*.tmp", ".DS_Store", "Thumbs.db"]
   },
