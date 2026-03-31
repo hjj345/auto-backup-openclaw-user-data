@@ -58,10 +58,10 @@
 
 | 变量 | 说明 | 示例值 |
 |------|------|--------|
-| `<SKILL_DIR>` | skill 脚本目录路径 | `C:\\Users\\hjj345\\.agents\\skills\\auto-backup-openclaw-user-data\\scripts` |
-| `<FEISHU_CHAT_ID>` | 飞书群组 ID | `oc_29b6bb10915966a39240f1b35c2d54ba` |
-| `<TELEGRAM_BOT_TOKEN>` | Telegram Bot Token | `8734437939:AAHumVOJffm2p--m6yj9z7b4mlgIp_GHdmc` |
-| `<TELEGRAM_CHAT_ID>` | Telegram 聊天 ID | `5387157555` |
+| `<SKILL_DIR>` | skill 脚本目录路径 | `~/.agents/skills/auto-backup-openclaw-user-data/scripts` |
+| `<FEISHU_CHAT_ID>` | 飞书群组 ID | `oc_xxxxxxxxxxxxxxxxxxxxxxxx` |
+| `<TELEGRAM_BOT_TOKEN>` | Telegram Bot Token | `1234567890:ABCdefGHIjklMNOpqrsTUVwxyz` |
+| `<TELEGRAM_CHAT_ID>` | Telegram 聊天 ID | `123456789` |
 
 ---
 
@@ -285,4 +285,4 @@ openclaw gateway restart
 
 ---
 
-_模板版本：v1.0.0 | 更新日期：2026-03-31_
+_模板版本：v1.0.2.20260331 | 更新日期：2026-03-31_
