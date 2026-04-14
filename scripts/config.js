@@ -61,6 +61,12 @@ const DEFAULT_CONFIG = {
       prefix: "auto-backup-openclaw-user-data",
       includeVersion: true,
       includeSequence: true
+    },
+    encryption: {
+      enabled: false,
+      password: null,
+      algorithm: "aes-256",
+      reminderShown: false
     }
   },
   
@@ -277,6 +283,12 @@ function migrateConfig(config) {
 
   if (config.backup.enableSensitiveExclude === undefined) {
     config.backup.enableSensitiveExclude = DEFAULT_CONFIG.backup.enableSensitiveExclude;
+    needsSave = true;
+  }
+
+  // v1.1.0: 新增加密配置字段
+  if (!config.output.encryption) {
+    config.output.encryption = DEFAULT_CONFIG.output.encryption;
     needsSave = true;
   }
 
