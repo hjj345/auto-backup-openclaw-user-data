@@ -16,10 +16,10 @@
 
 ```json
 {
-  "version": "1.0.2",
-  "createdAt": "2026-03-31T15:00:00+08:00",
-  "updatedAt": "2026-03-31T15:00:00+08:00",
-  
+  "version": "1.1.0",
+  "createdAt": "2026-04-14T15:00:00+08:00",
+  "updatedAt": "2026-04-14T15:00:00+08:00",
+
   "backup": { ... },
   "schedule": { ... },
   "output": { ... },
@@ -37,7 +37,7 @@
 
 | 字段 | 类型 | 必填 | 默认值 | 说明 |
 |------|------|------|--------|------|
-| `version` | string | 是 | "1.0.2" | 配置文件版本 |
+| `version` | string | 是 | "1.1.0" | 配置文件版本 |
 | `createdAt` | string | 否 | - | 创建时间（ISO 8601） |
 | `updatedAt` | string | 否 | - | 最后更新时间（ISO 8601） |
 
@@ -247,9 +247,9 @@ ERROR    # 错误信息
 
 ```json
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "backup": {
-    "mode": "full"
+    "mode": "partial"
   },
   "schedule": {
     "enabled": true,
@@ -277,15 +277,26 @@ ERROR    # 错误信息
 
 ```json
 {
-  "version": "1.0.2",
-  "createdAt": "2026-03-31T15:00:00+08:00",
-  "updatedAt": "2026-03-31T15:00:00+08:00",
-  
+  "version": "1.1.0",
+  "createdAt": "2026-04-14T15:00:00+08:00",
+  "updatedAt": "2026-04-14T15:00:00+08:00",
+
   "backup": {
     "mode": "partial",
-    "targets": ["workspace", "workspace-1", "memory"],
+    "targets": [],  // ← 改为空数组，首次加载时动态检测
     "exclude": ["logs", "cache", "tmp", "node_modules"],
-    "excludePatterns": ["*.log", "*.tmp", ".DS_Store", "Thumbs.db"]
+    "excludePatterns": ["*.log", "*.tmp", ".DS_Store", "Thumbs.db"],
+
+    // 敏感文件排除建议列表（默认不启用）
+    "sensitiveExcludeSuggestion": [
+      "*.key", "*.pem", "*.p12", "*.pfx",
+      ".env", ".env.local", ".env.*.local",
+      "credentials.json", "secrets.json"
+    ],
+    "sensitiveExcludeDirectories": [
+      "credentials", "secrets", ".ssh", ".gnupg"
+    ],
+    "enableSensitiveExclude": false
   },
   
   "schedule": {
@@ -360,5 +371,6 @@ ERROR    # 错误信息
 
 ---
 
-**文档版本**：v1.0.2  
-**更新日期**：2026-03-31
+**文档版本**：v1.1.0  
+**更新日期**：2026-04-14  
+**作者**：水木开发团队-Jack·Huang
