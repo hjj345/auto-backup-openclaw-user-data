@@ -1,6 +1,6 @@
 {
   "name": "auto-backup-openclaw-user-data",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "OpenClaw 用户数据自动备份技能",
   "main": "scripts/backup.js",
   "author": "Jack·Huang <jack698698@gmail.com>",
@@ -19,9 +19,9 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "archiver": "^6.0.0",
-    "fs-extra": "^11.0.0",
-    "dayjs": "^1.11.0"
+    "archiver": "6.0.0",
+    "fs-extra": "11.0.0",
+    "dayjs": "1.11.0"
   },
   "devDependencies": {},
   "scripts": {
