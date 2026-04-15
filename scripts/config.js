@@ -454,7 +454,22 @@ async function loadOpenClawConfig() {
         }
       }
     }
-    
+
+    // 从 Telegram allowFrom 配置解析用户（新增v1.1.0）
+    if (config.channels?.telegram?.allowFrom && Array.isArray(config.channels.telegram.allowFrom)) {
+      const tgUsers = config.channels.telegram.allowFrom;
+      for (const userId of tgUsers) {
+        if (!result.availableTargets.telegram) {
+          result.availableTargets.telegram = [];
+        }
+        result.availableTargets.telegram.push({
+          type: 'user',
+          id: String(userId),  // 转为字符串，确保id格式一致
+          name: `Telegram用户 ${userId}`
+        });
+      }
+    }
+
     return result;
   } catch (error) {
     console.error(`[Config] 加载 OpenClaw 配置失败: ${error.message}`);
