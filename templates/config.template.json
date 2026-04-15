@@ -37,6 +37,12 @@
       "prefix": "auto-backup-openclaw-user-data",
       "includeVersion": true,
       "includeSequence": true
+    },
+    "encryption": {
+      "enabled": false,
+      "password": null,
+      "algorithm": "aes-256",
+      "reminderShown": false
     }
   },
   

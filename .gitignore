@@ -26,10 +26,8 @@ Desktop.ini
 *.swp
 *.swo
 
-# git文件夹
-.git/
-
-# Claude配置文件
+# Claude相关
+.claude/
 CLAUDE.md
 
 # 临时文件
@@ -39,9 +37,7 @@ tmp/
 temp/
 
 # 打包输出
-skill_zip_output/
 *.skill
-*.zip
 
 # 敏感数据
 *.env
